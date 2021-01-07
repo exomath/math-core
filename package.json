@@ -9,7 +9,7 @@
     "index.js",
     "lib"
   ],
-  "repository": "https://github.com/exomath/math-nodes",
+  "repository": "https://github.com/exomath/math-core",
   "author": "Jake McKown <jbmckown@gmail.com>",
   "license": "MIT",
   "scripts": {
