@@ -7,7 +7,7 @@ export class LiteralNode implements Node {
 
   constructor(public readonly value: boolean | number | string) {
     if (!validValueTypes.includes(typeof value)) {
-      throw new TypeError(`LiteralNode: "value" cannot be of type "${typeof value}", must be "${validValueTypes.join('"|"')}"`);
+      throw new TypeError(`LiteralNode: "value" cannot be of type "${typeof value}", must be "${validValueTypes.join('" | "')}"`);
     }
   }
 

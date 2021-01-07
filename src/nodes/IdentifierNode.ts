@@ -7,7 +7,7 @@ export class IdentifierNode implements Node {
 
   constructor(public readonly name: string) {
     if (!validNameTypes.includes(typeof name)) {
-      throw new TypeError(`IdentifierNode: "name" cannot be of type "${typeof name}", must be "${validNameTypes.join('"|"')}"`);
+      throw new TypeError(`IdentifierNode: "name" cannot be of type "${typeof name}", must be "${validNameTypes.join('" | "')}"`);
     }
   }
 
