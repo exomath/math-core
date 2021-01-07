@@ -20,11 +20,11 @@ describe('OperationNode', () => {
       expect(node).to.be.an('object');
     });
 
-    it('Should have property "type", which equals "OperationNode"', () => {
+    it('Should have property "class", which equals "OperationNode"', () => {
       const node = OperationNode.new('+', [LiteralNode.new(1), LiteralNode.new(1)]);
 
-      expect(node).to.have.own.property('type');
-      expect(node.type).to.equal('OperationNode');
+      expect(node).to.have.own.property('class');
+      expect(node.class).to.equal('OperationNode');
     });
 
     it('Should have property "operator", which equals the first argument', () => {
