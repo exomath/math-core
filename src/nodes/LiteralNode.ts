@@ -1,17 +1,24 @@
 import { Node } from './';
+import { hasType, isBoolean, isNumber, isString } from '../utils';
 
-const validValueTypes = ['boolean', 'number', 'string'];
+const TYPE = 'LiteralNode';
 
-export class LiteralNode implements Node {
-  public readonly class = 'LiteralNode';
+export class LiteralNode extends Node {
+  public constructor(
+    public readonly value: boolean | number | string
+  ) {
+    super(TYPE);
 
-  constructor(public readonly value: boolean | number | string) {
-    if (!validValueTypes.includes(typeof value)) {
-      throw new TypeError(`LiteralNode: "value" cannot be of type "${typeof value}", must be "${validValueTypes.join('" | "')}"`);
+    if (!(isBoolean(value) || isNumber(value) || isString(value))) {
+      throw new TypeError(`${TYPE}: "value" must be of type boolean | number | string`);
     }
   }
 
   public static new(value: boolean | number | string) {
     return Object.freeze(new LiteralNode(value));
+  }
+
+  public static isLiteralNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }

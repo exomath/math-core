@@ -1,28 +1,29 @@
-import {
-  Node,
-  AccessorNode,
-  IdentifierNode
-} from './';
+import { Node, AccessorNode, IdentifierNode } from './';
+import { hasType } from '../utils';
 
-const validIdentifierClasses = ['AccessorNode', 'IdentifierNode'];
+const TYPE = 'AssignmentNode';
 
-export class AssignmentNode implements Node {
-  public readonly class = 'AssignmentNode';
-
-  constructor(
+export class AssignmentNode extends Node {
+  public constructor(
     public readonly identifier: AccessorNode | IdentifierNode,
     public readonly value: Node
   ) {
-    if (!(typeof identifier === 'object' && identifier.hasOwnProperty('class') && validIdentifierClasses.includes(identifier.class))) {
-      throw new TypeError(`AssignmentNode: "identifier" must be of class "${validIdentifierClasses.join('" | "')}"`);
+    super(TYPE);
+
+    if (!(AccessorNode.isAccessorNode(identifier) || IdentifierNode.isIdentifierNode(identifier))) {
+      throw new TypeError(`${TYPE}: "identifier" must be of type AccessorNode | IdentifierNode`);
     }
 
-    if (!(typeof value === 'object' && value.hasOwnProperty('class') && value.class.endsWith('Node'))) {
-      throw new TypeError('AssignmentNode: "content" must be of class "Node"');
+    if (!Node.isNode(value)) {
+      throw new TypeError(`${TYPE}: "content" must be of type *Node`);
     }
   }
 
   public static new(identifier: AccessorNode | IdentifierNode, value: Node) {
     return Object.freeze(new AssignmentNode(identifier, value));
+  }
+
+  public static isAssignmentNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }

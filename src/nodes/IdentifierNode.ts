@@ -1,17 +1,24 @@
 import { Node } from './';
+import { hasType, isString } from '../utils';
 
-const validNameTypes = ['string'];
+const TYPE = 'IdentifierNode';
 
-export class IdentifierNode implements Node {
-  public readonly class = 'IdentifierNode';
+export class IdentifierNode extends Node {
+  public constructor(
+    public readonly name: string
+  ) {
+    super(TYPE);
 
-  constructor(public readonly name: string) {
-    if (!validNameTypes.includes(typeof name)) {
-      throw new TypeError(`IdentifierNode: "name" cannot be of type "${typeof name}", must be "${validNameTypes.join('" | "')}"`);
+    if (!isString(name)) {
+      throw new TypeError(`${TYPE}: "name" must be of type string`);
     }
   }
 
   public static new(name: string) {
     return Object.freeze(new IdentifierNode(name));
+  }
+
+  public static isIdentifierNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }

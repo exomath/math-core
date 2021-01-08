@@ -1,17 +1,21 @@
 import { Node } from './';
+import { hasType, isString } from '../utils';
 
-const validOperatorTypes = ['string'];
+const TYPE = 'OperatorNode';
 
-export class OperatorNode implements Node {
-  public readonly class = 'OperatorNode';
+export class OperatorNode extends Node {
+  public constructor(
+    public readonly operator: string,
+    public readonly operands: Node[]
+  ) {
+    super(TYPE);
 
-  constructor(public readonly operator: string, public readonly operands: Node[]) {
-    if (!validOperatorTypes.includes(typeof operator)) {
-      throw new TypeError(`OperatorNode: "operator" cannot be of type "${typeof operator}", must be "${validOperatorTypes.join('" | "')}"`);
+    if (!isString(operator)) {
+      throw new TypeError(`${TYPE}: "operator" must be of type string`);
     }
 
-    if (!(Array.isArray(operands) && operands.every(operand => operand.hasOwnProperty('class') && operand.class.endsWith('Node')))) {
-      throw new TypeError('OperatorNode: "operands" must be an Array with items of class "Node"');
+    if (!Node.isNodeArray(operands)) {
+      throw new TypeError(`${TYPE}: "operands" must be of type *Node[]`);
     }
 
     Object.defineProperty(this, 'arity', {
@@ -22,5 +26,9 @@ export class OperatorNode implements Node {
 
   public static new(operator: string, operands: Node[]) {
     return Object.freeze(new OperatorNode(operator, operands));
+  }
+
+  public static isOperatorNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }

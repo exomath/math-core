@@ -1,23 +1,24 @@
 import { Node } from './';
+import { hasType, isObject } from '../utils';
 
 export interface ResultContainer {
-  containsResult: true
+  containsResult: boolean
 }
 
 interface Internal {
   result: object | null;
 }
 
-const validResultTypes = ['object']; // TODO: Update with specific types and check with the .type property
+const TYPE = 'ResultNode';
 
-export class ResultNode implements Node, ResultContainer {
-  public readonly class = 'ResultNode';
-  public readonly containsResult = true;
+export class ResultNode extends Node {
   private readonly internal: Internal = {
     result: null
   };
 
-  constructor() {
+  public constructor() {
+    super(TYPE);
+
     Object.defineProperty(this, 'result', {
       get: () => { return this.internal.result; },
       enumerable: true
@@ -29,8 +30,8 @@ export class ResultNode implements Node, ResultContainer {
   }
 
   public update(result: object) {
-    if (!validResultTypes.includes(typeof result)) {
-      throw new TypeError(`ResultNode: "result" cannot be of type "${typeof result}", must be "${validResultTypes.join('" | "')}"`);
+    if (!isObject(result)) {
+      throw new TypeError(`${TYPE}: "result" must be of type object`);
     }
 
     this.internal.result = result;
@@ -38,5 +39,9 @@ export class ResultNode implements Node, ResultContainer {
 
   public static new() {
     return Object.freeze(new ResultNode());
+  }
+
+  public static isResultNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }

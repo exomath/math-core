@@ -1,15 +1,24 @@
 import { Node } from './';
+import { hasType } from '../utils';
 
-export class ParenthesesNode implements Node {
-  readonly class = 'ParenthesesNode';
+const TYPE = 'ParenthesesNode';
 
-  constructor(public readonly content: Node) {
-    if (!(typeof content === 'object' && content.hasOwnProperty('class') && content.class.endsWith('Node'))) {
-      throw new TypeError('ParenthesesNode: "content" must be of class "Node"');
+export class ParenthesesNode extends Node {
+  public constructor(
+    public readonly content: Node
+  ) {
+    super(TYPE);
+
+    if (!Node.isNode(content)) {
+      throw new TypeError(`${TYPE}: "content" must be of type *Node`);
     }
   }
 
   public static new(content: Node) {
     return Object.freeze(new ParenthesesNode(content));
+  }
+
+  public static isParenthesesNode(value: any): boolean {
+    return hasType(value, TYPE);
   }
 }
