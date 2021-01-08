@@ -19,11 +19,11 @@ describe('IdentifierNode', () => {
       expect(node).to.be.an('object');
     });
 
-    it('Should have property "class", which equals "IdentifierNode"', () => {
+    it('Should have property "type", which equals "IdentifierNode"', () => {
       const node = IdentifierNode.new('a');
 
-      expect(node).to.have.own.property('class');
-      expect(node.class).to.equal('IdentifierNode');
+      expect(node).to.have.own.property('type');
+      expect(node.type).to.equal('IdentifierNode');
     });
 
     it('Should have property "name", which equals the first argument', () => {
