@@ -1,4 +1,4 @@
-import { Node } from './Node';
+import { Node } from './';
 
 interface Internal {
   result: object | null;
@@ -14,7 +14,7 @@ export class ResultNode implements Node {
 
   constructor() {
     Object.defineProperty(this, 'result', {
-      get() { return this.internal.result; },
+      get: () => { return this.internal.result; },
       enumerable: true
     });
   }

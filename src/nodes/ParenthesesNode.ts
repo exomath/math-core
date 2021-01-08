@@ -1,4 +1,4 @@
-import { Node } from './Node';
+import { Node } from './';
 
 export class ParenthesesNode implements Node {
   readonly class = 'ParenthesesNode';
