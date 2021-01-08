@@ -1,18 +1,17 @@
-import { Node, ResultContainer, TensorNode } from './';
+import { Node, ResultNode, TensorNode } from './';
 import { hasType, isString } from '../utils';
 
 const TYPE = 'QuantityNode';
 
-export class QuantityNode extends Node implements ResultContainer {
+export class QuantityNode extends Node {
   public constructor(
-    public readonly value: TensorNode,
-    public readonly unit: string,
-    public readonly containsResult = false
+    public readonly value: TensorNode | ResultNode,
+    public readonly unit: string
   ) {
     super(TYPE);
 
-    if (!TensorNode.isTensorNode(value)) {
-      throw new TypeError(`${TYPE}: "value" must be of type TensorNode`);
+    if (!(TensorNode.isTensorNode(value) || ResultNode.isResultNode(value))) {
+      throw new TypeError(`${TYPE}: "value" must be of type TensorNode | ResultNode`);
     }
 
     if (!isString(unit)) {
@@ -20,7 +19,7 @@ export class QuantityNode extends Node implements ResultContainer {
     }
   }
 
-  public static new(value: TensorNode, unit: string) {
+  public static new(value: TensorNode | ResultNode, unit: string) {
     return Object.freeze(new QuantityNode(value, unit));
   }
 

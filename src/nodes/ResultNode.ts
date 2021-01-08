@@ -1,15 +1,11 @@
 import { Node } from './';
 import { hasType, isObject } from '../utils';
 
-export interface ResultContainer {
-  containsResult: boolean
-}
+const TYPE = 'ResultNode';
 
 interface Internal {
   result: object | null;
 }
-
-const TYPE = 'ResultNode';
 
 export class ResultNode extends Node {
   private readonly internal: Internal = {
