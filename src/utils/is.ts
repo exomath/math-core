@@ -18,6 +18,10 @@ export function isNaN(value: any): boolean {
   return isNumber(value) && Number.isNaN(value);
 }
 
+export function isNull(value: any): boolean {
+  return value === null;
+}
+
 export function isObject(value: any): boolean {
   return typeof value === 'object';
 }
