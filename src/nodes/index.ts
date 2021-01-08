@@ -5,5 +5,7 @@ export * from './EvaluationNode';
 export * from './IdentifierNode';
 export * from './LiteralNode';
 export * from './OperatorNode';
+export * from './QuantityNode';
 export * from './ParenthesesNode';
 export * from './ResultNode';
+export * from './TensorNode';
