@@ -1,13 +1,18 @@
 import { Node } from './';
 
+export interface ResultContainer {
+  containsResult: true
+}
+
 interface Internal {
   result: object | null;
 }
 
 const validResultTypes = ['object']; // TODO: Update with specific types and check with the .type property
 
-export class ResultNode implements Node {
+export class ResultNode implements Node, ResultContainer {
   public readonly class = 'ResultNode';
+  public readonly containsResult = true;
   private readonly internal: Internal = {
     result: null
   };
