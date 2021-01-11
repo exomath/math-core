@@ -3,12 +3,12 @@ import { hasType, isObject } from '../utils';
 
 const TYPE = 'ResultNode';
 
-interface Internal {
+interface IInternal {
   result: object | null;
 }
 
 export class ResultNode extends Node {
-  private readonly internal: Internal = {
+  private readonly internal: IInternal = {
     result: null
   };
 
