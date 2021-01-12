@@ -1,4 +1,4 @@
-import { Node, AccessorNode, IdentifierNode } from './';
+import { Node, AccessorNode, IdentifierNode } from '.';
 import { hasType } from '../utils';
 
 const TYPE = 'AssignmentNode';

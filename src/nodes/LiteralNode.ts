@@ -1,4 +1,4 @@
-import { Node } from './';
+import { Node } from '.';
 import { hasType, isBoolean, isNumber, isString } from '../utils';
 
 const TYPE = 'LiteralNode';

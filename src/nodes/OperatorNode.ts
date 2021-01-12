@@ -1,4 +1,4 @@
-import { Node } from './';
+import { Node } from '.';
 import { hasType, isString } from '../utils';
 
 const TYPE = 'OperatorNode';

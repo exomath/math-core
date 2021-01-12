@@ -1,4 +1,4 @@
-import { Node, IdentifierNode } from './';
+import { Node, IdentifierNode } from '.';
 import { hasType, isNull } from '../utils';
 
 const TYPE = 'RecordNode';

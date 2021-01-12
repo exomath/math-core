@@ -1,4 +1,4 @@
-import { Node, ResultNode, TensorNode } from './';
+import { Node, ResultNode, TensorNode } from '.';
 import { hasType, isString } from '../utils';
 
 const TYPE = 'QuantityNode';

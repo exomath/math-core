@@ -1,4 +1,4 @@
-import { Node, QuantityNode, ResultNode } from './';
+import { Node, QuantityNode, ResultNode } from '.';
 import { hasType } from '../utils';
 
 const TYPE = 'EvaluationNode';

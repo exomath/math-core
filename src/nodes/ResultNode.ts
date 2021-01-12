@@ -1,4 +1,4 @@
-import { Node } from './';
+import { Node } from '.';
 import { hasType, isObject } from '../utils';
 
 const TYPE = 'ResultNode';
