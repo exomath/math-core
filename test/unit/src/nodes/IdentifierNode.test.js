@@ -26,13 +26,13 @@ describe('IdentifierNode', () => {
       expect(node.type).to.equal('IdentifierNode');
     });
 
-    it('Should have property "name", which equals the first argument', () => {
+    it('Should have property "identifier", which equals the first argument', () => {
       const firstArgument = 'a';
 
       const node = IdentifierNode.new(firstArgument);
 
-      expect(node).to.have.own.property('name');
-      expect(node.name).to.equal(firstArgument);
+      expect(node).to.have.own.property('identifier');
+      expect(node.identifier).to.equal(firstArgument);
     });
 
     it('Should throw error with invalid argument(s)', () => {
