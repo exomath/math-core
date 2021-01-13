@@ -1,10 +1,10 @@
 import { Node, IdentifierNode } from '.';
-import { hasType, isNull } from '../utils';
+import { hasType, isNull } from '..';
 
 const TYPE = 'RecordNode';
 
 export class RecordNode extends Node {
-  public constructor(
+  private constructor(
     public readonly map: Map<IdentifierNode, Node>,
     public readonly primary: IdentifierNode | null = null
   ) {

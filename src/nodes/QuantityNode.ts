@@ -1,10 +1,10 @@
 import { Node, ResultNode, TensorNode } from '.';
-import { hasType, isString } from '../utils';
+import { hasType, isString } from '..';
 
 const TYPE = 'QuantityNode';
 
 export class QuantityNode extends Node {
-  public constructor(
+  private constructor(
     public readonly value: TensorNode | ResultNode,
     public readonly unit: string
   ) {

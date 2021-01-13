@@ -1,10 +1,10 @@
 import { Node } from '.';
-import { hasType } from '../utils';
+import { hasType } from '..';
 
 const TYPE = 'ParenthesesNode';
 
 export class ParenthesesNode extends Node {
-  public constructor(
+  private constructor(
     public readonly content: Node
   ) {
     super(TYPE);

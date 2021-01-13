@@ -1,10 +1,10 @@
 import { Node } from '.';
-import { hasType, isBoolean, isNumber, isString } from '../utils';
+import { hasType, isBoolean, isNumber, isString } from '..';
 
 const TYPE = 'LiteralNode';
 
 export class LiteralNode extends Node {
-  public constructor(
+  private constructor(
     public readonly value: boolean | number | string
   ) {
     super(TYPE);

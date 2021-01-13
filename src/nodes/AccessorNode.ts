@@ -1,10 +1,10 @@
 import { Node, IdentifierNode } from '.';
-import { hasType } from '../utils';
+import { hasType } from '..';
 
 const TYPE = 'AccessorNode';
 
 export class AccessorNode extends Node {
-  public constructor(
+  private constructor(
     public readonly identifier: AccessorNode | IdentifierNode,
     public readonly index: IdentifierNode | Node[]
   ) {

@@ -1,10 +1,10 @@
 import { Node } from '.';
-import { hasType, isIntegerArray } from '../utils';
+import { hasType, isIntegerArray } from '..';
 
 const TYPE = 'TensorNode';
 
 export class TensorNode extends Node {
-  public constructor(
+  private constructor(
     public readonly data: Node[],
     public readonly shape: number[]
   ) {

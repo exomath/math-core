@@ -1,10 +1,10 @@
 import { Node, QuantityNode, ResultNode } from '.';
-import { hasType } from '../utils';
+import { hasType } from '..';
 
 const TYPE = 'EvaluationNode';
 
 export class EvaluationNode extends Node {
-  public constructor(
+  private constructor(
     public readonly expression: Node,
     public readonly result: Node
   ) {

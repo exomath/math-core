@@ -1,7 +1,7 @@
-import { hasOwnProperty, isArray } from '../utils';
+import { hasOwnProperty, isArray } from '..';
 
 export abstract class Node {
-  public constructor(public readonly type: string) {}
+  protected constructor(public readonly type: string) {}
 
   public static isNode(value: any): boolean {
     // Returns true for all *Node (e.g., LiteralNode, IdentifierNode, etc.)

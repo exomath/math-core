@@ -1,10 +1,10 @@
 import { Node } from '.';
-import { hasType, isString } from '../utils';
+import { hasType, isString } from '..';
 
 const TYPE = 'IdentifierNode';
 
 export class IdentifierNode extends Node {
-  public constructor(
+  private constructor(
     public readonly identifier: string
   ) {
     super(TYPE);

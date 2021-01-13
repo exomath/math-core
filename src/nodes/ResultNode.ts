@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType, isObject } from '../utils';
+import { hasType, isObject } from '..';
 
 const TYPE = 'ResultNode';
 
@@ -12,7 +12,7 @@ export class ResultNode extends Node {
     result: null
   };
 
-  public constructor() {
+  private constructor() {
     super(TYPE);
 
     Object.defineProperty(this, 'result', {

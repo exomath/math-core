@@ -1,10 +1,10 @@
 import { Node } from '.';
-import { hasType, isString } from '../utils';
+import { hasType, isString } from '..';
 
 const TYPE = 'OperatorNode';
 
 export class OperatorNode extends Node {
-  public constructor(
+  private constructor(
     public readonly operator: string,
     public readonly operands: Node[]
   ) {
