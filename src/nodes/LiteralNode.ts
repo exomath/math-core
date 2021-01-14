@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType, isBoolean, isNumber, isString } from '..';
+import { assert, hasType, isBoolean, isNumber, isString } from '..';
 
 const TYPE = 'LiteralNode';
 
@@ -9,9 +9,9 @@ export class LiteralNode extends Node {
   ) {
     super(TYPE);
 
-    if (!(isBoolean(value) || isNumber(value) || isString(value))) {
-      throw new TypeError(`${TYPE}: "value" must be of type boolean | number | string`);
-    }
+    assert(isBoolean(value) || isNumber(value) || isString(value), () => {
+      return '"value" must be of type boolean | number | string';
+    }, TYPE);
   }
 
   public static new(value: boolean | number | string) {

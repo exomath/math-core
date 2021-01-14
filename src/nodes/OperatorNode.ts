@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType, isString } from '..';
+import { assert, hasType, isString } from '..';
 
 const TYPE = 'OperatorNode';
 
@@ -10,13 +10,8 @@ export class OperatorNode extends Node {
   ) {
     super(TYPE);
 
-    if (!isString(operator)) {
-      throw new TypeError(`${TYPE}: "operator" must be of type string`);
-    }
-
-    if (!Node.isNodeArray(operands)) {
-      throw new TypeError(`${TYPE}: "operands" must be of type *Node[]`);
-    }
+    assert(isString(operator), '"operator" must be of type string', TYPE);
+    assert(Node.isNodeArray(operands), '"operands" must be of type *Node[]', TYPE);
 
     Object.defineProperty(this, 'arity', {
       get: () => { return this.operands.length; },

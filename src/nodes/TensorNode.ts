@@ -1,26 +1,21 @@
 import { Node } from '.';
-import { hasType, isIntegerArray } from '..';
+import { assert, hasType, isIntegerArray } from '..';
 
 const TYPE = 'TensorNode';
 
 export class TensorNode extends Node {
   private constructor(
-    public readonly data: Node[],
+    public readonly values: Node[],
     public readonly shape: number[]
   ) {
     super(TYPE);
 
-    if (!Node.isNodeArray(data)) {
-      throw new TypeError(`${TYPE}: "data" must be of type *Node[]`);
-    }
-
-    if (!isIntegerArray(shape)) {
-      throw new TypeError(`${TYPE}: "shape" must be of type number[], with each item an integer`);
-    }
+    assert(Node.isNodeArray(values), '"data" must be of type *Node[]', TYPE);
+    assert(isIntegerArray(shape), '"shape" must be of type number[], with each item an integer', TYPE);
   }
 
-  public static new(data: Node[], shape: number[]) {
-    return Object.freeze(new TensorNode(data, shape));
+  public static new(values: Node[], shape: number[]) {
+    return Object.freeze(new TensorNode(values, shape));
   }
 
   public static isTensorNode(value: any): boolean {

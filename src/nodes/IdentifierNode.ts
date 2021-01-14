@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType, isString } from '..';
+import { assert, hasType, isString } from '..';
 
 const TYPE = 'IdentifierNode';
 
@@ -9,9 +9,9 @@ export class IdentifierNode extends Node {
   ) {
     super(TYPE);
 
-    if (!isString(identifier)) {
-      throw new TypeError(`${TYPE}: "identifier" must be of type string`);
-    }
+    assert(isString(identifier), () => {
+      return '"identifier" must be of type string';
+    }, TYPE);
   }
 
   public static new(identifier: string) {

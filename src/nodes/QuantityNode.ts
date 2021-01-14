@@ -1,5 +1,5 @@
 import { Node, ResultNode, TensorNode } from '.';
-import { hasType, isString } from '..';
+import { assert, hasType, isString } from '..';
 
 const TYPE = 'QuantityNode';
 
@@ -10,13 +10,13 @@ export class QuantityNode extends Node {
   ) {
     super(TYPE);
 
-    if (!(TensorNode.isTensorNode(value) || ResultNode.isResultNode(value))) {
-      throw new TypeError(`${TYPE}: "value" must be of type TensorNode | ResultNode`);
-    }
+    assert(
+      TensorNode.isTensorNode(value) || ResultNode.isResultNode(value),
+      '"value" must be of type TensorNode | ResultNode',
+      TYPE
+    );
 
-    if (!isString(unit)) {
-      throw new TypeError(`${TYPE}: "unit" must be of type string`);
-    }
+    assert(isString(unit), '"unit" must be of type string', TYPE);
   }
 
   public static new(value: TensorNode | ResultNode, unit: string) {

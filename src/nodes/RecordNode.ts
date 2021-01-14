@@ -1,5 +1,5 @@
 import { Node, IdentifierNode } from '.';
-import { hasType, isNull } from '..';
+import { assert, hasType, isNull } from '..';
 
 const TYPE = 'RecordNode';
 
@@ -10,13 +10,13 @@ export class RecordNode extends Node {
   ) {
     super(TYPE);
 
-    if (!(map instanceof Map)) {
-      throw new TypeError(`${TYPE}: "map" must be of type Map<IdentifierNode, *Node>`);
-    }
+    assert(map instanceof Map, '"map" must be of type Map<IdentifierNode, *Node>', TYPE);
 
-    if (!(IdentifierNode.isIdentifierNode(primary) || isNull(primary))) {
-      throw new TypeError(`${TYPE}: "primary" must be of type IdentifierNode | null`);
-    }
+    assert(
+      IdentifierNode.isIdentifierNode(primary) || isNull(primary),
+      '"primary" must be of type IdentifierNode | null',
+      TYPE
+    );
   }
 
   public static new(map: Map<IdentifierNode, Node>, primary: IdentifierNode | null = null) {

@@ -1,5 +1,5 @@
 import { Node, IdentifierNode } from '.';
-import { hasType } from '..';
+import { assert, hasType } from '..';
 
 const TYPE = 'AccessorNode';
 
@@ -10,13 +10,17 @@ export class AccessorNode extends Node {
   ) {
     super(TYPE);
 
-    if (!(AccessorNode.isAccessorNode(identifier) || IdentifierNode.isIdentifierNode(identifier))) {
-      throw new TypeError(`${TYPE}: "identifier" must be of type AccessorNode | IdentifierNode`);
-    }
+    assert(
+      AccessorNode.isAccessorNode(identifier) || IdentifierNode.isIdentifierNode(identifier),
+      '"identifier" must be of type AccessorNode | IdentifierNode',
+      TYPE
+    );
 
-    if (!(IdentifierNode.isIdentifierNode(index) || Node.isNodeArray(index))) {
-      throw new TypeError(`${TYPE}: "index" must be of type IdentifierNode | *Node[]`);
-    }
+    assert(
+      IdentifierNode.isIdentifierNode(index) || Node.isNodeArray(index),
+      '"index" must be of type IdentifierNode | *Node[]',
+      TYPE
+    );
   }
 
   public static new(identifier: AccessorNode | IdentifierNode, index: IdentifierNode | Node[]) {

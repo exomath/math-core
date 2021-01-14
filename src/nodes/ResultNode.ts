@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType, isObject } from '..';
+import { assert, hasType, isObject } from '..';
 
 const TYPE = 'ResultNode';
 
@@ -26,9 +26,7 @@ export class ResultNode extends Node {
   }
 
   public update(result: object) {
-    if (!isObject(result)) {
-      throw new TypeError(`${TYPE}: "result" must be of type object`);
-    }
+    assert(isObject(result), '"result" must be of type object', TYPE);
 
     this.internal.result = result;
   }

@@ -1,5 +1,5 @@
 import { Node, IdentifierNode } from '.';
-import { hasType } from '..';
+import { assert, hasType } from '..';
 
 const TYPE = 'FunctionNode';
 
@@ -10,13 +10,8 @@ export class FunctionNode extends Node {
   ) {
     super(TYPE);
 
-    if (!IdentifierNode.isIdentifierNode(fn)) {
-      throw new TypeError(`${TYPE}: "fn" must be of type IdentifierNode`);
-    }
-
-    if (!Node.isNodeArray(args)) {
-      throw new TypeError(`${TYPE}: "args" must be of type *Node[]`);
-    }
+    assert(IdentifierNode.isIdentifierNode(fn), '"fn" must be of type IdentifierNode', TYPE);
+    assert(Node.isNodeArray(args), '"args" must be of type *Node[]', TYPE);
 
     Object.defineProperty(this, 'arity', {
       get: () => { return this.args.length; },

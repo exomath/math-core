@@ -1,5 +1,5 @@
 import { Node, QuantityNode, ResultNode } from '.';
-import { hasType } from '..';
+import { assert, hasType } from '..';
 
 const TYPE = 'EvaluationNode';
 
@@ -10,17 +10,14 @@ export class EvaluationNode extends Node {
   ) {
     super(TYPE);
 
-    if (!Node.isNode(expression)) {
-      throw new TypeError(`${TYPE}: "expression" must be of type *Node`);
-    }
+    assert(Node.isNode(expression), '"expression" must be of type *Node', TYPE);
 
-    const { isQuantityNode } = QuantityNode;
-    const { isResultNode } = ResultNode;
-
-    if (!isResultNode(result)) {
-      if (isQuantityNode(result) && !isResultNode((result as QuantityNode).value)) {
-        throw new TypeError(`${TYPE}: if "result" is of type QuanityNode, it must have "value" of type ResultNode`);
-      }
+    if (!ResultNode.isResultNode(result) && QuantityNode.isQuantityNode(result)) {
+      assert(
+        ResultNode.isResultNode((result as QuantityNode).value),
+        'If "result" is of type QuanityNode, it must have "value" of type ResultNode',
+        TYPE
+      );
     }
   }
 

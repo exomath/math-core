@@ -1,5 +1,5 @@
 import { Node } from '.';
-import { hasType } from '..';
+import { assert, hasType } from '..';
 
 const TYPE = 'ParenthesesNode';
 
@@ -9,9 +9,7 @@ export class ParenthesesNode extends Node {
   ) {
     super(TYPE);
 
-    if (!Node.isNode(content)) {
-      throw new TypeError(`${TYPE}: "content" must be of type *Node`);
-    }
+    assert(Node.isNode(content), '"content" must be of type *Node', TYPE);
   }
 
   public static new(content: Node) {
