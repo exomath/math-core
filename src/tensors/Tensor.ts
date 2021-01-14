@@ -1,4 +1,4 @@
-import { TensorManager, TensorView } from '.';
+import { TensorManager, TensorAccessor } from '.';
 import {
   assert,
   isArray, isBoolean, isNumber, isNumberArray, isString,
@@ -24,10 +24,8 @@ interface RecursiveArray <T extends any> {
 */
 
 type TypedArray = Int32Array | Float64Array; // | Uint8Array
-type ScalarLike = number | boolean | string; // TensorFlow has "| Uint8Array"
+type ScalarLike = number; // | string | boolean; // TensorFlow has "| Uint8Array"
 type ArrayLike = number[] | TypedArray // | Uint8Array[] | RecursiveArray<number | number[] | TypedArray> | RecursiveArray<boolean> | RecursiveArray<string>;
-
-export type TensorShape = number[];
 
 interface DTypeMap {
   i32: Int32Array;
@@ -39,17 +37,9 @@ interface DTypeMap {
 // export type KernelDataValues = Int32Array | Float64Array | Uint8Array | Uint8Array[]; // Do we need this?
 export type TensorDType = keyof DTypeMap;
 export type TensorValues = DTypeMap[TensorDType] | ScalarLike;
+export type TensorHandle = {};
 
 let _manager: TensorManager | null = null;
-
-export interface TensorHandle {};
-
-type TensorIndex = number[];
-
-interface TensorAccessor {
-  get: () => number;
-  set: (value: number) => void;
-}
 
 const TYPE = 'Tensor';
 
@@ -61,7 +51,7 @@ export class Tensor {
 
   private constructor(
     values: TensorValues,
-    public readonly shape: TensorShape,
+    public readonly shape: number[],
     public readonly dtype: TensorDType
   ) {
     assert(_manager !== null, 'No tensor manager is set; call Tensor.setManager() first', TYPE);
@@ -73,18 +63,10 @@ export class Tensor {
     this.handle = (_manager as TensorManager).allocate(values, dtype);
   }
 
-  public index(index: TensorIndex): TensorAccessor {
-    const view: TensorView = (_manager as TensorManager).view(this.handle) as TensorView;
-    const viewIndex = 0;
+  public index(index: number[]): TensorAccessor {
+    assert(getRank(index) === this.rank, '"index" rank must match tensor rank', TYPE + '.index()');
 
-    return {
-      get: () => {
-        return view[viewIndex];
-      },
-      set: (value: number) => {
-        view[viewIndex] = value;
-      }
-    };
+    return (_manager as TensorManager).index(this.handle, this.shape, index);
   }
 
   public values() {
@@ -95,7 +77,7 @@ export class Tensor {
     _manager = manager;
   }
 
-  public static new(values: TensorValues, shape: TensorShape, dtype: TensorDType) {
+  public static new(values: TensorValues, shape: number[], dtype: TensorDType) {
     return Object.freeze(new Tensor(values, shape, dtype));
   }
 
@@ -110,12 +92,12 @@ export class Tensor {
 
     dtype = dtype || getDtype(value);
 
-    const shape: TensorShape = [];
+    const shape: number[] = [];
 
     return Tensor.new(value, shape, dtype);
   }
 
-  public static fromArray(values: ArrayLike, shape: TensorShape, dtype?: TensorDType) {
+  public static fromArray(values: ArrayLike, shape: number[], dtype?: TensorDType) {
     const assertMessenger = TYPE + '.fromArray()';
 
     assert(
@@ -156,30 +138,33 @@ function getDtype(value: TensorValues | number[]): TensorDType {
   }
 }
 
-function getLength(shape: TensorShape): number {
+function getLength(shape: number[]): number {
   return shape.length === 0 ? 1 : shape.reduce((length, next) => length * next);
 }
 
-function getStrides(shape: TensorShape): number[] {
+function getStrides(shape: number[]): number[] {
   const rank = getRank(shape);
 
-  if (rank < 2) {
-    return [];
+  switch (rank) {
+    case 0:
+      return [];
+    case 1:
+      return [1];
+    default:
+      const strides = new Array(rank);
+
+      strides[rank - 1] = 1;
+      strides[rank - 2] = shape[rank - 1];
+
+      for (let i = rank - 3; i >= 0; --i) {
+        strides[i] = strides[i + 1] * shape[i + 1];
+      }
+
+      return strides;
   }
-
-  // Last dimension has implicit stride of 1, thus having D-1 (instead of D)
-  // strides.
-  const strides = new Array(rank - 1);
-  strides[rank - 2] = shape[rank - 1];
-
-  for (let i = rank - 3; i >= 0; --i) {
-    strides[i] = strides[i + 1] * shape[i + 1];
-  }
-
-  return strides;
 }
 
-function getRank(shape: TensorShape): number {
+function getRank(shape: number[]): number {
   return shape.length;
 }
 
