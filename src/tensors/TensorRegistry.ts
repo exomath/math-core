@@ -1,6 +1,6 @@
 import { TensorHandle, TensorRecord } from '.';
 
-export class TensorRegistry extends Map<TensorHandle, TensorRecord> {
+export class TensorRegistry extends WeakMap<TensorHandle, TensorRecord> {
   private constructor() {
     super();
   }
