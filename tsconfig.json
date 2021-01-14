@@ -2,7 +2,6 @@
   "include": ["./src"],
   "compilerOptions": {
     "declaration": true,
-    "declarationMap": true,
     "lib": ["es6", "es2017", "dom"],
     "moduleResolution": "node",
     "outDir": "./lib",
