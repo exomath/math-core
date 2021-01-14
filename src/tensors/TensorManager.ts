@@ -1,7 +1,16 @@
-import { TensorValues, TensorDType, TensorHandle, TensorRecord, TensorRegistry } from '.';
+import {
+  TensorValues,
+  TensorDType,
+  TensorHandle,
+  TensorRecord,
+  TensorRegistry
+} from '.';
 import { assert } from '..';
 
-export type TensorView = Int32Array | Float64Array;
+export interface TensorAccessor {
+  get: () => number;
+  set: (value: number) => void;
+}
 
 const TYPE = 'TensorManager';
 const MEMORY_INITIAL_SIZE = 1;
@@ -14,7 +23,7 @@ export class TensorManager {
 
   public allocate(values: TensorValues, dtype: TensorDType): TensorHandle {
     const handle: TensorHandle = {};
-    const { offset, length, view } = allocateMemory(values, dtype);
+    const { offset, length, view } = allocateMemory(this.memory, values, dtype);
     const record = TensorRecord.new(offset, length, dtype, view);
 
     this.registry.set(handle, record);
@@ -22,16 +31,32 @@ export class TensorManager {
     return handle;
   }
 
-  public read(handle: TensorHandle): TensorValues {
-    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', TYPE + '.read()');
+  public index(handle: TensorHandle, strides: number[], index: number[]): TensorAccessor {
+    const assertMessenger = TYPE + '.index()';
+
+    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', assertMessenger);
+    assert(strides.length === index.length, '"strides" and "index" must be the same length', assertMessenger);
 
     const record = this.registry.get(handle) as TensorRecord;
 
-    return record.view;
+    let offset = 0;
+    
+    for (let i = 0; i < strides.length; ++i) {
+      offset += index[i] * strides[i];
+    }
+
+    return {
+      get: () => {
+        return record.view[offset];
+      },
+      set: (value: number) => {
+        record.view[offset] = value;
+      }
+    };
   }
 
-  public view(handle: TensorHandle): TensorValues {
-    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', TYPE + '.view()');
+  public read(handle: TensorHandle): TensorValues {
+    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', TYPE + '.read()');
 
     const record = this.registry.get(handle) as TensorRecord;
 
@@ -44,7 +69,7 @@ export class TensorManager {
 }
 
 // Replace with real implementation
-function allocateMemory(values: TensorValues, dtype: TensorDType) {
+function allocateMemory(memory: WebAssembly.Memory, values: TensorValues, dtype: TensorDType) {
   return {
     offset: 0,
     length: 0,
