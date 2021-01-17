@@ -1,3 +1,5 @@
-export * from './nodes';
-export * from './tensors';
+export * from './Tensor';
+export * from './TensorManager';
+export * from './TensorRecord';
+export * from './TensorRegistry';
 export * from './utils';
