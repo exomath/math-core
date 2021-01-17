@@ -1,9 +1,10 @@
 import {
-  TensorManager, TensorAccessor,
   assert,
   isArray, isBoolean, isNumber, isNumberArray, isString,
   isInt32Array, isFloat64Array, isTypedArray
-} from '.';
+} from '@exomath/core';
+
+import { TensorManager, TensorAccessor } from '.';
 
 /* Do we need this?
 type Tensor0D = Tensor<Rank.R0>;
