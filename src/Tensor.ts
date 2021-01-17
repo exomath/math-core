@@ -1,9 +1,9 @@
-import { TensorManager, TensorAccessor } from '.';
 import {
+  TensorManager, TensorAccessor,
   assert,
   isArray, isBoolean, isNumber, isNumberArray, isString,
   isInt32Array, isFloat64Array, isTypedArray
-} from '..';
+} from '.';
 
 /* Do we need this?
 type Tensor0D = Tensor<Rank.R0>;

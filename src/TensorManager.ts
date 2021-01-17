@@ -1,11 +1,8 @@
 import {
-  TensorValues,
-  TensorDType,
-  TensorHandle,
-  TensorRecord,
-  TensorRegistry
+  TensorValues, TensorDType, TensorHandle,
+  TensorRecord, TensorRegistry,
+  assert
 } from '.';
-import { assert } from '..';
 
 export interface TensorAccessor {
   get: () => number;
