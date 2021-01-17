@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/exomath/images/master/logos/Exomath Square Logo.png" alt="Exomath" height="150" width="150">
 </p>
 <h1 align="center">Math Core</h1>
-<p align="center">Exomath core objects</p>
+<p align="center">Exomath core math objects</p>
 <br>
 
 ## Installation
