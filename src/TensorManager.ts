@@ -1,7 +1,8 @@
+import { assert } from '@exomath/core';
+
 import {
   TensorValues, TensorDType, TensorHandle,
-  TensorRecord, TensorRegistry,
-  assert
+  TensorRecord, TensorRegistry
 } from '.';
 
 export interface TensorAccessor {
