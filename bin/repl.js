@@ -1,10 +1,8 @@
 'use strict';
 
-const mathCore = require('../index');
-
 const repl = require('repl').start();
 
-Object.assign(repl.context, mathCore);
+Object.assign(repl.context, require('../index'));
 
 Object.defineProperty(repl.context, 'exit', {
   enumerable: true,
