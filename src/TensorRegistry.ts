@@ -1,4 +1,4 @@
-import { TensorHandle, TensorRecord } from '.';
+import { TensorHandle, TensorRecord } from './index';
 
 export class TensorRegistry extends WeakMap<TensorHandle, TensorRecord> {
   private constructor() {

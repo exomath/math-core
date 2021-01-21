@@ -4,7 +4,7 @@ import {
   isInt32Array, isFloat64Array, isTypedArray
 } from '@exomath/core';
 
-import { TensorManager, TensorAccessor } from '.';
+import { TensorManager, TensorAccessor } from './index';
 
 /* Do we need this?
 type Tensor0D = Tensor<Rank.R0>;
@@ -65,7 +65,7 @@ export class Tensor {
   }
 
   public index(index: number[]): TensorAccessor {
-    assert(getRank(index) === this.rank, '"index" rank must match tensor rank', TYPE + '.index()');
+    assert(getRank(index) === this.rank, '"index" rank must match tensor rank', TYPE + '.index');
 
     return (_manager as TensorManager).index(this.handle, this.shape, index);
   }
@@ -83,12 +83,12 @@ export class Tensor {
   }
 
   public static fromScalar(value: ScalarLike, dtype?: TensorDType) {
-    const assertMessenger = TYPE + '.fromScalar()';
+    const messenger = TYPE + '.fromScalar';
 
     assert(
       isNumber(value) || isString(value) || isBoolean(value),
       '"value" must be of type number | string | boolean',
-      assertMessenger
+      messenger
     );
 
     dtype = dtype || getDtype(value);
@@ -99,15 +99,15 @@ export class Tensor {
   }
 
   public static fromArray(values: ArrayLike, shape: number[], dtype?: TensorDType) {
-    const assertMessenger = TYPE + '.fromArray()';
+    const messenger = TYPE + '.fromArray';
 
     assert(
       isNumberArray(values) || isInt32Array(values) || isFloat64Array(values),
       '"values" must be of type number[] | Int32Array | Float64Array', // | Uint8Array | string[]
-      assertMessenger
+      messenger
     );
 
-    assert(isNumberArray(shape), '"shape" must be of type number[]', assertMessenger)
+    assert(isNumberArray(shape), '"shape" must be of type number[]', messenger)
 
     dtype = dtype || getDtype(values);
 
@@ -170,10 +170,10 @@ function getRank(shape: number[]): number {
 }
 
 function getTypedArray(value: number[], dtype: TensorDType): TypedArray {
-  const assertMessenger = 'getTypedArray()';
+  const messenger = '.getTypedArray';
 
-  assert(isNumberArray(value), '"value" must be of type number[]', assertMessenger);
-  assert(dtype === 'i32' || dtype === 'f64', '"value" must be "i32" | "f64"', assertMessenger);
+  assert(isNumberArray(value), '"value" must be of type number[]', messenger);
+  assert(dtype === 'i32' || dtype === 'f64', '"value" must be "i32" | "f64"', messenger);
 
   switch (dtype) {
     case 'i32':

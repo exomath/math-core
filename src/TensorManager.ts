@@ -3,7 +3,7 @@ import { assert } from '@exomath/core';
 import {
   TensorValues, TensorDType, TensorHandle,
   TensorRecord, TensorRegistry
-} from '.';
+} from './index';
 
 export interface TensorAccessor {
   get: () => number;
@@ -30,10 +30,10 @@ export class TensorManager {
   }
 
   public index(handle: TensorHandle, strides: number[], index: number[]): TensorAccessor {
-    const assertMessenger = TYPE + '.index()';
+    const messenger = TYPE + '.index';
 
-    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', assertMessenger);
-    assert(strides.length === index.length, '"strides" and "index" must be the same length', assertMessenger);
+    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', messenger);
+    assert(strides.length === index.length, '"strides" and "index" must be the same length', messenger);
 
     const record = this.registry.get(handle) as TensorRecord;
 
@@ -54,7 +54,7 @@ export class TensorManager {
   }
 
   public read(handle: TensorHandle): TensorValues {
-    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', TYPE + '.read()');
+    assert(this.registry.has(handle), '"handle" is not managed by this tensor manager', TYPE + '.read');
 
     const record = this.registry.get(handle) as TensorRecord;
 
