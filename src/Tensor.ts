@@ -1,10 +1,14 @@
 import {
   assert,
-  isArray, isBoolean, isNumber, isNumberArray, isString,
-  isInt32Array, isFloat64Array, isTypedArray
+  isArray,
+  isBoolean,
+  isNumber,
+  isNumberArray,
+  isString,
+  isInt32Array,
+  isFloat64Array,
+  isTypedArray
 } from '@exomath/core';
-
-import { TensorManager, TensorAccessor } from './index';
 
 /* Do we need this?
 type Tensor0D = Tensor<Rank.R0>;
@@ -37,15 +41,60 @@ interface DTypeMap {
 
 // export type KernelDataValues = Int32Array | Float64Array | Uint8Array | Uint8Array[]; // Do we need this?
 export type TensorDType = keyof DTypeMap;
-export type TensorValues = DTypeMap[TensorDType] | ScalarLike;
-export type TensorHandle = {};
+type TensorArrayValues = DTypeMap[TensorDType];
+export type TensorValues = TensorArrayValues | ScalarLike;
+export type TensorId = {};
 
-let _manager: TensorManager | null = null;
+class TensorRecord {
+  private constructor(
+    public readonly byteOffset: number,
+    public readonly byteLength: number,
+    public readonly dtype: string
+  ) {}
+
+  public static new(
+    byteOffset: number,
+    byteLength: number,
+    dtype: string
+  ) {
+    return new TensorRecord(byteOffset, byteLength, dtype);
+  }
+}
+
+class TensorRegistry extends WeakMap<TensorId, TensorRecord> {
+  private constructor() {
+    super();
+  }
+
+  public static new() {
+    return new TensorRegistry();
+  }
+}
+
+class TensorMemory extends WebAssembly.Memory {
+  private constructor() {
+    super({ initial: 1 });
+  }
+  
+  // Replace with real implementation
+  public allocate(byteLength: number): number {
+    const byteOffset = 0 // Find free space
+
+    return byteOffset;
+  }
+
+  public static new() {
+    return new TensorMemory();
+  }
+}
+
+const registry = TensorRegistry.new();
+const memory = TensorMemory.new();
 
 const TYPE = 'Tensor';
 
 export class Tensor {
-  public readonly handle: TensorHandle;
+  public readonly id: TensorId;
   public readonly length: number;
   public readonly strides: number[];
   public readonly rank: number;
@@ -55,30 +104,42 @@ export class Tensor {
     public readonly shape: number[],
     public readonly dtype: TensorDType
   ) {
-    assert(_manager !== null, 'No tensor manager is set; call Tensor.setManager() first', TYPE);
-
     // TensorFlow has "this.shape = shape.slice() as ShapeMap[R]"
     this.length = getLength(shape);
     this.strides = getStrides(shape);
     this.rank = getRank(shape);
-    this.handle = (_manager as TensorManager).allocate(values, dtype);
+    this.id = Tensor.register(values, dtype);
   }
 
-  public index(index: number[]): TensorAccessor {
-    assert(getRank(index) === this.rank, '"index" rank must match tensor rank', TYPE + '.index');
+  public index(index: number[]): number | undefined {
+    const messenger = TYPE + '.index';
 
-    return (_manager as TensorManager).index(this.handle, this.shape, index);
+    assert(this.strides.length === index.length, '"strides" and "index" must be the same length', messenger);
+
+    const values = Tensor.read(this.id);
+
+    if (values === undefined) {
+      return undefined;
+    }
+
+    if (isNumber(values)) {
+      return values as number;
+    }
+
+    let offset = 0;
+    
+    for (let i = 0; i < this.strides.length; ++i) {
+      offset += index[i] * this.strides[i];
+    }
+
+    return (values as TensorArrayValues)[offset];
   }
 
-  public values() {
-    return (_manager as TensorManager).read(this.handle);
+  public values(): TensorValues | undefined {
+    return Tensor.read(this.id);
   }
 
-  public static setManager(manager: TensorManager) {
-    _manager = manager;
-  }
-
-  public static new(values: TensorValues, shape: number[], dtype: TensorDType) {
+  private static new(values: TensorValues, shape: number[], dtype: TensorDType) {
     return Object.freeze(new Tensor(values, shape, dtype));
   }
 
@@ -91,7 +152,7 @@ export class Tensor {
       messenger
     );
 
-    dtype = dtype || getDtype(value);
+    dtype = dtype ?? getDtype(value);
 
     const shape: number[] = [];
 
@@ -109,13 +170,45 @@ export class Tensor {
 
     assert(isNumberArray(shape), '"shape" must be of type number[]', messenger)
 
-    dtype = dtype || getDtype(values);
+    dtype = dtype ?? getDtype(values);
 
     return Tensor.new(
       (isNumberArray(values) ? getTypedArray(values as number[], dtype) : values) as TensorValues,
       shape,
       dtype
     );
+  }
+
+  private static register(values: TensorValues, dtype: TensorDType): TensorId {
+    const id: TensorId = {};
+    const byteLength = 0; // Compute byte length based on values and dtype
+    console.log(typeof memory);
+    const byteOffset = memory.allocate(byteLength);
+    const record = TensorRecord.new(byteOffset, byteLength, dtype);
+
+    registry.set(id, record);
+
+    return id;
+  }
+
+  private static read(id: TensorId): TensorValues | undefined {
+    const record = registry.get(id);
+
+    if (record === undefined) {
+      return undefined;
+    }
+
+    const { byteOffset, byteLength, dtype } = record;
+
+    const buffer = memory.buffer.slice(byteOffset, byteOffset + byteLength);
+
+    switch (dtype) {
+      case 'i32':
+        return new Int32Array(buffer);
+      case 'f64':
+      default:
+        return new Float64Array(buffer);
+    }
   }
 }
 
@@ -186,7 +279,7 @@ function getTypedArray(value: number[], dtype: TensorDType): TypedArray {
 
 /* Do we need this?
 function assertDeepShapeConsistency(value: TensorLike, shape: number[], indices: number[]): void {
-  indices = indices || [];
+  indices = indices ?? [];
 
   if (!(isArray(value)) && !isTypedArray(value)) {
     assert(shape.length === 0, () => {
