@@ -176,10 +176,10 @@
     lodash "^4.17.19"
     to-fast-properties "^2.0.0"
 
-"@exomath/core@^0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@exomath/core/-/core-0.2.1.tgz#c51b4c6c0bd5254c67f9481deabb32b161450b20"
-  integrity sha512-iE+mN5eFG/A+E8wmUeu1IyfGPEyOwIUhwOuzuwwC/pe+432XhF+uSpb6mFti9hIT83uEjujqYmhTCYbI/kAJAA==
+"@exomath/core@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@exomath/core/-/core-0.7.0.tgz#42d2449222a3f7a333ae291fa539c467bd0586c1"
+  integrity sha512-ahwHykL6+Ss7bSYLGNDWFJ9MhUF3MkCgZ6lRplM2C2yMXfjUJdS8/9fyi0I//02hPW00cchDr5acDHuRD6sDjg==
   dependencies:
     esm "^3.2.25"
 
@@ -1082,9 +1082,9 @@ path-key@^3.1.0:
   integrity sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==
 
 pathval@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/pathval/-/pathval-1.1.0.tgz#b942e6d4bde653005ef6b71361def8727d0645e0"
-  integrity sha1-uULm1L3mUwBe9rcTYd74cn0GReA=
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/pathval/-/pathval-1.1.1.tgz#8534e77a77ce7ac5a2512ea21e0fdb8fcf6c3d8d"
+  integrity sha512-Dp6zGqpTdETdR63lehJYPeIOqpiNBNtc7BpWSLrOje7UaIsE5aY92r/AunQA7rsXvet3lrJ3JnZX29UPTKXyKQ==
 
 picomatch@^2.0.4, picomatch@^2.2.1:
   version "2.2.2"
