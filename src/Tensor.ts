@@ -1,7 +1,10 @@
 import {
   assert,
+  IChainLink,
+  ChainManager,
   isArray,
   isBoolean,
+  isNull,
   isNumber,
   isNumberArray,
   isString,
@@ -32,7 +35,7 @@ type TypedArray = Int32Array | Float64Array; // | Uint8Array
 type ScalarLike = number; // | string | boolean; // TensorFlow has "| Uint8Array"
 type ArrayLike = number[] | TypedArray // | Uint8Array[] | RecursiveArray<number | number[] | TypedArray> | RecursiveArray<boolean> | RecursiveArray<string>;
 
-interface DTypeMap {
+interface TensorDataTypes {
   i32: Int32Array;
   f64: Float64Array;
   // bool: Uint8Array;
@@ -40,10 +43,10 @@ interface DTypeMap {
 }
 
 // export type KernelDataValues = Int32Array | Float64Array | Uint8Array | Uint8Array[]; // Do we need this?
-export type TensorDType = keyof DTypeMap;
-type TensorArrayValues = DTypeMap[TensorDType];
-export type TensorValues = TensorArrayValues | ScalarLike;
-export type TensorId = {};
+type TensorDataType = keyof TensorDataTypes;
+type TensorArrayValues = TensorDataTypes[TensorDataType];
+type TensorValues = TensorArrayValues | ScalarLike;
+type TensorId = {};
 
 class TensorRecord {
   private constructor(
@@ -71,27 +74,115 @@ class TensorRegistry extends WeakMap<TensorId, TensorRecord> {
   }
 }
 
-class TensorMemory extends WebAssembly.Memory {
-  private constructor() {
-    super({ initial: 1 });
+class FreeMemoryBlock implements IChainLink<FreeMemoryBlock> {
+  public prev: FreeMemoryBlock | null = null;
+  public next: FreeMemoryBlock | null = null;
+
+  private constructor(
+    public byteOffset: number,
+    public byteLength: number
+  ) {}
+
+  public static new(byteOffset: number, byteLength: number) {
+    return new FreeMemoryBlock(byteOffset, byteLength);
   }
-  
-  // Replace with real implementation
+}
+
+let messenger = 'TensorMemory';
+
+class TensorMemory extends ChainManager<FreeMemoryBlock> {
+  private allocated: Map<number, number> = new Map();
+
+  private constructor(
+    private heap: WebAssembly.Memory = new WebAssembly.Memory({ initial: 1 })
+  ) {
+    super();
+
+    this.insert(FreeMemoryBlock.new(0, this.heap.buffer.byteLength));
+  }
+
   public allocate(byteLength: number): number {
-    const byteOffset = 0 // Find free space
+    let block = this.firstFit(byteLength);
+    
+    if (isNull(block) || block === this.first && block.byteLength === byteLength) {
+      try {
+        this.heap.grow(1);
+      } catch (error) {
+        // RangeError: WebAssembly.Memory.grow(): Maximum memory size exceeded
+      }
+
+      block = this.first as FreeMemoryBlock;
+
+      block.byteLength = this.heap.buffer.byteLength - block.byteOffset;
+    }
+
+    const byteOffset = block.byteOffset;
+
+    if (block.byteLength === byteLength) {
+      this.remove(block);
+    } else {
+      block.byteOffset = block.byteOffset + byteLength;
+      block.byteLength = byteLength - block.byteOffset;
+    }
+
+    this.allocated.set(byteOffset, byteLength);
 
     return byteOffset;
   }
+
+  public buffer(byteOffset: number): ArrayBuffer {
+    assert(
+      this.allocated.has(byteOffset),
+      '"byteOffset" is not allocated',
+      messenger + '.buffer'
+    );
+
+    const byteLength = this.allocated.get(byteOffset) as number;
+
+    return this.heap.buffer.slice(byteOffset, byteOffset + byteLength);
+  }
+
+  private firstFit(byteLength: number): FreeMemoryBlock | null {
+    let block: FreeMemoryBlock | null = this.first as FreeMemoryBlock;
+
+    while (!isNull(block)) {
+      if (block.byteLength < byteLength) {
+        block = block.next;
+      } else {
+        break;
+      }
+    }
+
+    return block;
+  }
+
+  public free(byteOffset: number) {
+    assert(
+      this.allocated.has(byteOffset),
+      '"byteOffset" is not allocated',
+      messenger + '.free'
+    );
+
+    const byteLength = this.allocated.get(byteOffset) as number;
+
+    this.insert(FreeMemoryBlock.new(byteOffset, byteLength));
+
+    this.allocated.delete(byteOffset);
+  }
+
+  /*public set(byteOffset: number, buffer) {
+
+  }*/
 
   public static new() {
     return new TensorMemory();
   }
 }
 
-const registry = TensorRegistry.new();
-const memory = TensorMemory.new();
+const _registry = TensorRegistry.new();
+const _memory = TensorMemory.new();
 
-const TYPE = 'Tensor';
+const TYPE = messenger = 'Tensor';
 
 export class Tensor {
   public readonly id: TensorId;
@@ -102,13 +193,13 @@ export class Tensor {
   private constructor(
     values: TensorValues,
     public readonly shape: number[],
-    public readonly dtype: TensorDType
+    public readonly dtype: TensorDataType
   ) {
     // TensorFlow has "this.shape = shape.slice() as ShapeMap[R]"
     this.length = getLength(shape);
     this.strides = getStrides(shape);
     this.rank = getRank(shape);
-    this.id = Tensor.register(values, dtype);
+    this.id = Tensor.write(values, dtype);
   }
 
   public index(index: number[]): number | undefined {
@@ -123,7 +214,7 @@ export class Tensor {
     }
 
     if (isNumber(values)) {
-      return values as number;
+      return values;
     }
 
     let offset = 0;
@@ -132,45 +223,41 @@ export class Tensor {
       offset += index[i] * this.strides[i];
     }
 
-    return (values as TensorArrayValues)[offset];
+    return values[offset];
   }
 
   public values(): TensorValues | undefined {
     return Tensor.read(this.id);
   }
 
-  private static new(values: TensorValues, shape: number[], dtype: TensorDType) {
+  private static new(values: TensorValues, shape: number[], dtype: TensorDataType) {
     return Object.freeze(new Tensor(values, shape, dtype));
   }
 
-  public static fromScalar(value: ScalarLike, dtype?: TensorDType) {
-    const messenger = TYPE + '.fromScalar';
-
+  public static fromScalar(value: ScalarLike, dtype?: TensorDataType) {
     assert(
       isNumber(value) || isString(value) || isBoolean(value),
       '"value" must be of type number | string | boolean',
-      messenger
+      messenger + '.fromScalar'
     );
 
-    dtype = dtype ?? getDtype(value);
+    dtype = dtype ?? getDataType(value);
 
     const shape: number[] = [];
 
     return Tensor.new(value, shape, dtype);
   }
 
-  public static fromArray(values: ArrayLike, shape: number[], dtype?: TensorDType) {
-    const messenger = TYPE + '.fromArray';
-
+  public static fromArray(values: ArrayLike, shape: number[], dtype?: TensorDataType) {
     assert(
       isNumberArray(values) || isInt32Array(values) || isFloat64Array(values),
       '"values" must be of type number[] | Int32Array | Float64Array', // | Uint8Array | string[]
-      messenger
+      messenger + '.fromArray'
     );
 
-    assert(isNumberArray(shape), '"shape" must be of type number[]', messenger)
+    assert(isNumberArray(shape), '"shape" must be of type number[]', messenger + '.fromArray')
 
-    dtype = dtype ?? getDtype(values);
+    dtype = dtype ?? getDataType(values);
 
     return Tensor.new(
       (isNumberArray(values) ? getTypedArray(values as number[], dtype) : values) as TensorValues,
@@ -179,20 +266,8 @@ export class Tensor {
     );
   }
 
-  private static register(values: TensorValues, dtype: TensorDType): TensorId {
-    const id: TensorId = {};
-    const byteLength = 0; // Compute byte length based on values and dtype
-    console.log(typeof memory);
-    const byteOffset = memory.allocate(byteLength);
-    const record = TensorRecord.new(byteOffset, byteLength, dtype);
-
-    registry.set(id, record);
-
-    return id;
-  }
-
   private static read(id: TensorId): TensorValues | undefined {
-    const record = registry.get(id);
+    const record = _registry.get(id);
 
     if (record === undefined) {
       return undefined;
@@ -200,7 +275,13 @@ export class Tensor {
 
     const { byteOffset, byteLength, dtype } = record;
 
-    const buffer = memory.buffer.slice(byteOffset, byteOffset + byteLength);
+    const buffer = _memory.buffer(byteOffset);
+
+    assert(
+      buffer.byteLength === byteLength,
+      '"buffer.byteLength" does not equal tensor byteLength',
+      messenger + '.read'
+    );
 
     switch (dtype) {
       case 'i32':
@@ -210,11 +291,36 @@ export class Tensor {
         return new Float64Array(buffer);
     }
   }
+
+  private static write(values: TensorValues, dtype: TensorDataType): TensorId {
+    const id: TensorId = {};
+
+    const byteLength = isNumber(values) ? getSize(dtype) : values.length * getSize(dtype);
+    const byteOffset = _memory.allocate(byteLength);
+
+    // _memory.set(byteOffset)
+
+    const record = TensorRecord.new(byteOffset, byteLength, dtype);
+
+    _registry.set(id, record);
+
+    return id;
+  }
+
+  // For debugging only
+  
+  private static memory(): TensorMemory {
+    return _memory;
+  }
+
+  private static registry(): TensorRegistry {
+    return _registry;
+  }
 }
 
-function getDtype(value: TensorValues | number[]): TensorDType {
+function getDataType(value: TensorValues | number[]): TensorDataType {
   if (isArray(value) || isTypedArray(value)) {
-    return getDtype((value as ArrayLike)[0]);
+    return getDataType((value as ArrayLike)[0]);
   }
 
   if (isFloat64Array(value)) {
@@ -234,6 +340,20 @@ function getDtype(value: TensorValues | number[]): TensorDType {
 
 function getLength(shape: number[]): number {
   return shape.length === 0 ? 1 : shape.reduce((length, next) => length * next);
+}
+
+function getRank(shape: number[]): number {
+  return shape.length;
+}
+
+function getSize(dtype: TensorDataType): number {
+  switch (dtype) {
+    case 'i32':
+      return 4;
+    case 'f64':
+    default:
+      return 8;
+  }
 }
 
 function getStrides(shape: number[]): number[] {
@@ -258,11 +378,7 @@ function getStrides(shape: number[]): number[] {
   }
 }
 
-function getRank(shape: number[]): number {
-  return shape.length;
-}
-
-function getTypedArray(value: number[], dtype: TensorDType): TypedArray {
+function getTypedArray(value: number[], dtype: TensorDataType): TypedArray {
   const messenger = '.getTypedArray';
 
   assert(isNumberArray(value), '"value" must be of type number[]', messenger);
