@@ -1,7 +1,7 @@
 import {
   assert,
-  IChainLink,
-  ChainManager,
+  ILinkedListNode,
+  LinkedList,
   isArray,
   isBoolean,
   isNull,
@@ -52,15 +52,17 @@ class TensorRecord {
   private constructor(
     public readonly byteOffset: number,
     public readonly byteLength: number,
-    public readonly dtype: string
+    public readonly dtype: string,
+    public readonly view: TensorArrayValues
   ) {}
 
   public static new(
     byteOffset: number,
     byteLength: number,
-    dtype: string
+    dtype: string,
+    view: TensorArrayValues
   ) {
-    return new TensorRecord(byteOffset, byteLength, dtype);
+    return new TensorRecord(byteOffset, byteLength, dtype, view);
   }
 }
 
@@ -74,7 +76,7 @@ class TensorRegistry extends WeakMap<TensorId, TensorRecord> {
   }
 }
 
-class FreeMemoryBlock implements IChainLink<FreeMemoryBlock> {
+class FreeMemoryBlock implements ILinkedListNode<FreeMemoryBlock> {
   public prev: FreeMemoryBlock | null = null;
   public next: FreeMemoryBlock | null = null;
 
@@ -90,30 +92,32 @@ class FreeMemoryBlock implements IChainLink<FreeMemoryBlock> {
 
 let messenger = 'TensorMemory';
 
-class TensorMemory extends ChainManager<FreeMemoryBlock> {
+class TensorMemory extends LinkedList<FreeMemoryBlock> {
   private allocated: Map<number, number> = new Map();
 
   private constructor(
     private heap: WebAssembly.Memory = new WebAssembly.Memory({ initial: 1 })
   ) {
-    super();
-
-    this.insert(FreeMemoryBlock.new(0, this.heap.buffer.byteLength));
+    super(FreeMemoryBlock.new(0, heap.buffer.byteLength));
   }
 
   public allocate(byteLength: number): number {
     let block = this.firstFit(byteLength);
     
-    if (isNull(block) || block === this.first && block.byteLength === byteLength) {
+    if (isNull(block) || block === this.head && block.byteLength === byteLength) {
+      const head = this.head as FreeMemoryBlock;
+
       try {
-        this.heap.grow(1);
+        while (head.byteLength < byteLength) {
+          this.heap.grow(1);
+
+          head.byteLength = this.heap.buffer.byteLength - head.byteOffset;
+        }
       } catch (error) {
         // RangeError: WebAssembly.Memory.grow(): Maximum memory size exceeded
       }
 
-      block = this.first as FreeMemoryBlock;
-
-      block.byteLength = this.heap.buffer.byteLength - block.byteOffset;
+      block = head;
     }
 
     const byteOffset = block.byteOffset;
@@ -122,7 +126,7 @@ class TensorMemory extends ChainManager<FreeMemoryBlock> {
       this.remove(block);
     } else {
       block.byteOffset = block.byteOffset + byteLength;
-      block.byteLength = byteLength - block.byteOffset;
+      block.byteLength = block.byteLength - block.byteOffset;
     }
 
     this.allocated.set(byteOffset, byteLength);
@@ -130,20 +134,8 @@ class TensorMemory extends ChainManager<FreeMemoryBlock> {
     return byteOffset;
   }
 
-  public buffer(byteOffset: number): ArrayBuffer {
-    assert(
-      this.allocated.has(byteOffset),
-      '"byteOffset" is not allocated',
-      messenger + '.buffer'
-    );
-
-    const byteLength = this.allocated.get(byteOffset) as number;
-
-    return this.heap.buffer.slice(byteOffset, byteOffset + byteLength);
-  }
-
   private firstFit(byteLength: number): FreeMemoryBlock | null {
-    let block: FreeMemoryBlock | null = this.first as FreeMemoryBlock;
+    let block: FreeMemoryBlock | null = this.head as FreeMemoryBlock;
 
     while (!isNull(block)) {
       if (block.byteLength < byteLength) {
@@ -159,32 +151,41 @@ class TensorMemory extends ChainManager<FreeMemoryBlock> {
   public free(byteOffset: number) {
     assert(
       this.allocated.has(byteOffset),
-      '"byteOffset" is not allocated',
+      `"byteOffset" ${byteOffset} is not allocated`,
       messenger + '.free'
     );
 
     const byteLength = this.allocated.get(byteOffset) as number;
 
-    this.insert(FreeMemoryBlock.new(byteOffset, byteLength));
+    this.insert(FreeMemoryBlock.new(byteOffset, byteLength), this.head); // To do: Try to merge consecutive blocks if present
 
     this.allocated.delete(byteOffset);
   }
 
-  /*public set(byteOffset: number, buffer) {
+  public view(byteOffset: number): Uint8Array {
+    assert(
+      this.allocated.has(byteOffset),
+      `"byteOffset" ${byteOffset} is not allocated`,
+      messenger + '.buffer'
+    );
 
-  }*/
+    const byteLength = this.allocated.get(byteOffset) as number;
+
+    return new Uint8Array(this.heap.buffer, byteOffset, byteLength);
+  }
 
   public static new() {
     return new TensorMemory();
   }
 }
 
-const _registry = TensorRegistry.new();
-const _memory = TensorMemory.new();
+let _registry = TensorRegistry.new();
+let _memory = TensorMemory.new();
 
 const TYPE = messenger = 'Tensor';
 
 export class Tensor {
+  public readonly type = TYPE;
   public readonly id: TensorId;
   public readonly length: number;
   public readonly strides: number[];
@@ -202,12 +203,18 @@ export class Tensor {
     this.id = Tensor.write(values, dtype);
   }
 
+  public dispose() {
+    Tensor.delete(this.id);
+  }
+
   public index(index: number[]): number | undefined {
-    const messenger = TYPE + '.index';
+    assert(
+      this.strides.length === index.length,
+      '"strides" and "index" must be the same length',
+      messenger + '.index'
+    );
 
-    assert(this.strides.length === index.length, '"strides" and "index" must be the same length', messenger);
-
-    const values = Tensor.read(this.id);
+    const values = this.values();
 
     if (values === undefined) {
       return undefined;
@@ -227,7 +234,17 @@ export class Tensor {
   }
 
   public values(): TensorValues | undefined {
-    return Tensor.read(this.id);
+    const view = Tensor.read(this.id);
+
+    if (view === undefined) {
+      return undefined;
+    }
+
+    if (this.rank === 0) {
+      return view[0];
+    }
+
+    return view.slice();
   }
 
   private static new(values: TensorValues, shape: number[], dtype: TensorDataType) {
@@ -266,41 +283,57 @@ export class Tensor {
     );
   }
 
-  private static read(id: TensorId): TensorValues | undefined {
+  private static delete(id: TensorId): boolean {
     const record = _registry.get(id);
 
     if (record === undefined) {
-      return undefined;
+      return false;
     }
 
-    const { byteOffset, byteLength, dtype } = record;
+    _memory.free(record.byteOffset);
+    _registry.delete(id);
 
-    const buffer = _memory.buffer(byteOffset);
+    return true;
+  }
 
-    assert(
-      buffer.byteLength === byteLength,
-      '"buffer.byteLength" does not equal tensor byteLength',
-      messenger + '.read'
-    );
+  private static read(id: TensorId): TensorArrayValues | undefined {
+    const record = _registry.get(id);
 
-    switch (dtype) {
-      case 'i32':
-        return new Int32Array(buffer);
-      case 'f64':
-      default:
-        return new Float64Array(buffer);
-    }
+    return record?.view;
   }
 
   private static write(values: TensorValues, dtype: TensorDataType): TensorId {
     const id: TensorId = {};
 
-    const byteLength = isNumber(values) ? getSize(dtype) : values.length * getSize(dtype);
+    const length = isNumber(values) ? 1 : values.length;
+
+    const byteLength = length * getSize(dtype);
     const byteOffset = _memory.allocate(byteLength);
+    const rawView = _memory.view(byteOffset);
 
-    // _memory.set(byteOffset)
+    assert(
+      rawView.byteLength === byteLength,
+      `"rawView.byteLength" ${rawView.byteLength} !== tensor byteLength ${byteLength}`,
+      messenger + '.read'
+    );
 
-    const record = TensorRecord.new(byteOffset, byteLength, dtype);
+    let view: TensorArrayValues;
+
+    switch (dtype) {
+      case 'i32':
+        view = new Int32Array(rawView.buffer, byteOffset, length);
+      case 'f64':
+      default:
+        view = new Float64Array(rawView.buffer, byteOffset, length);
+    }
+
+    if (isNumber(values)) {
+      view[0] = values;
+    } else {
+      view.set(values);
+    }
+
+    const record = TensorRecord.new(byteOffset, byteLength, dtype, view);
 
     _registry.set(id, record);
 
@@ -316,18 +349,23 @@ export class Tensor {
   private static registry(): TensorRegistry {
     return _registry;
   }
+
+  private static reset() {
+    _registry = TensorRegistry.new();
+    _memory = TensorMemory.new();
+  }
 }
 
-function getDataType(value: TensorValues | number[]): TensorDataType {
-  if (isArray(value) || isTypedArray(value)) {
-    return getDataType((value as ArrayLike)[0]);
+function getDataType(values: TensorValues | number[]): TensorDataType {
+  if (isArray(values) || isTypedArray(values)) {
+    return getDataType((values as ArrayLike)[0]);
   }
 
-  if (isFloat64Array(value)) {
+  if (isFloat64Array(values)) {
     return 'f64';
-  } else if (isInt32Array(value)) { // || values instanceof Uint8Array
+  } else if (isInt32Array(values)) { // || values instanceof Uint8Array
     return 'i32';
-  } else if (isNumber(value)) {
+  } else if (isNumber(values)) {
     return 'f64';
   }/* else if (isString(value)) {
     return 'str';
@@ -378,18 +416,18 @@ function getStrides(shape: number[]): number[] {
   }
 }
 
-function getTypedArray(value: number[], dtype: TensorDataType): TypedArray {
-  const messenger = '.getTypedArray';
+function getTypedArray(values: number[], dtype: TensorDataType): TypedArray {
+  const messenger = 'getTypedArray';
 
-  assert(isNumberArray(value), '"value" must be of type number[]', messenger);
+  assert(isNumberArray(values), '"values" must be of type number[]', messenger);
   assert(dtype === 'i32' || dtype === 'f64', '"value" must be "i32" | "f64"', messenger);
 
   switch (dtype) {
     case 'i32':
-      return new Int32Array(value);
+      return new Int32Array(values);
     case 'f64':
     default:
-      return new Float64Array(value);
+      return new Float64Array(values);
   }
 }
 
