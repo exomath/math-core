@@ -66,16 +66,6 @@ class TensorRecord {
   }
 }
 
-class TensorRegistry extends WeakMap<TensorId, TensorRecord> {
-  private constructor() {
-    super();
-  }
-
-  public static new() {
-    return new TensorRegistry();
-  }
-}
-
 class FreeMemoryBlock implements ILinkedListNode<FreeMemoryBlock> {
   public prev: FreeMemoryBlock | null = null;
   public next: FreeMemoryBlock | null = null;
@@ -93,15 +83,17 @@ class FreeMemoryBlock implements ILinkedListNode<FreeMemoryBlock> {
 let messenger = 'TensorMemory';
 
 class TensorMemory extends LinkedList<FreeMemoryBlock> {
-  private allocated: Map<number, number> = new Map();
+  private heap: WebAssembly.Memory = new WebAssembly.Memory({ initial: 1 });
+  private freed: Map<number, FreeMemoryBlock> = new Map();
+  public registry: Map<TensorId, TensorRecord> = new Map();
 
-  private constructor(
-    private heap: WebAssembly.Memory = new WebAssembly.Memory({ initial: 1 })
-  ) {
-    super(FreeMemoryBlock.new(0, heap.buffer.byteLength));
+  private constructor() {
+    super();
+
+    this.free(0, this.heap.buffer.byteLength);
   }
 
-  public allocate(byteLength: number): number {
+  private allocate(byteLength: number): number {
     let block = this.firstFit(byteLength);
     
     if (isNull(block) || block === this.head && block.byteLength === byteLength) {
@@ -122,16 +114,37 @@ class TensorMemory extends LinkedList<FreeMemoryBlock> {
 
     const byteOffset = block.byteOffset;
 
+    this.freed.delete(byteOffset);
+
     if (block.byteLength === byteLength) {
       this.remove(block);
     } else {
       block.byteOffset = block.byteOffset + byteLength;
       block.byteLength = block.byteLength - block.byteOffset;
+
+      this.freed.set(block.byteOffset, block);
     }
 
-    this.allocated.set(byteOffset, byteLength);
-
     return byteOffset;
+  }
+
+  public get count() {
+    return this.registry.size;
+  }
+
+  public delete(id: TensorId): boolean {
+    const record = this.registry.get(id);
+
+    if (record === undefined) {
+      return false;
+    }
+
+    const { byteOffset, byteLength } = record;
+
+    this.free(byteOffset, byteLength);
+    this.registry.delete(id);
+
+    return true;
   }
 
   private firstFit(byteLength: number): FreeMemoryBlock | null {
@@ -139,39 +152,92 @@ class TensorMemory extends LinkedList<FreeMemoryBlock> {
 
     while (!isNull(block)) {
       if (block.byteLength < byteLength) {
+        // Try to consume adjacent blocks before going to the next
+        let adjacentBlock = this.freed.get(block.byteOffset + block.byteLength);
+
+        while (adjacentBlock) {
+          block = this.merge(block, adjacentBlock);
+
+          if (block.byteLength >= byteLength) {
+            return block;
+          }
+
+          adjacentBlock = this.freed.get(block.byteOffset + block.byteLength);
+        }
+
         block = block.next;
       } else {
-        break;
+        return block;
       }
     }
 
-    return block;
+    return null;
   }
 
-  public free(byteOffset: number) {
-    assert(
-      this.allocated.has(byteOffset),
-      `"byteOffset" ${byteOffset} is not allocated`,
-      messenger + '.free'
-    );
+  private free(byteOffset: number, byteLength: number) {
+    // If there's a free adjacent block, just expand that one.
+    // Otherwise, create a new block.
+    let block = this.freed.get(byteOffset + byteLength);
 
-    const byteLength = this.allocated.get(byteOffset) as number;
+    if (block) {
+      this.freed.delete(block.byteOffset);
 
-    this.insert(FreeMemoryBlock.new(byteOffset, byteLength), this.head); // To do: Try to merge consecutive blocks if present
+      block.byteOffset = byteOffset;
+      block.byteLength = block.byteLength + byteLength;
+    } else {
+      block = FreeMemoryBlock.new(byteOffset, byteLength);
+    }
 
-    this.allocated.delete(byteOffset);
+    this.insert(block, this.tail);
+    this.freed.set(byteOffset, block);
   }
 
-  public view(byteOffset: number): Uint8Array {
-    assert(
-      this.allocated.has(byteOffset),
-      `"byteOffset" ${byteOffset} is not allocated`,
-      messenger + '.buffer'
-    );
+  private merge(block: FreeMemoryBlock, adjacentBlock: FreeMemoryBlock): FreeMemoryBlock {
+    this.freed.delete(block.byteOffset);
+    this.freed.delete(adjacentBlock.byteOffset);
 
-    const byteLength = this.allocated.get(byteOffset) as number;
+    adjacentBlock.byteOffset = block.byteOffset;
+    adjacentBlock.byteLength = adjacentBlock.byteLength + block.byteLength;
 
-    return new Uint8Array(this.heap.buffer, byteOffset, byteLength);
+    this.remove(block);
+    this.freed.set(adjacentBlock.byteOffset, adjacentBlock);
+
+    return adjacentBlock;
+  }
+
+  public read(id: TensorId): TensorArrayValues | undefined {
+    const record = this.registry.get(id);
+
+    return record?.view;
+  }
+
+  public write(values: TensorValues, dtype: TensorDataType): TensorId {
+    const id: TensorId = {};
+    const length = isNumber(values) ? 1 : values.length;
+    const byteLength = length * getSize(dtype);
+    const byteOffset = this.allocate(byteLength);
+
+    let view: TensorArrayValues;
+
+    switch (dtype) {
+      case 'i32':
+        view = new Int32Array(this.heap.buffer, byteOffset, length);
+      case 'f64':
+      default:
+        view = new Float64Array(this.heap.buffer, byteOffset, length);
+    }
+
+    if (isNumber(values)) {
+      view[0] = values;
+    } else {
+      view.set(values);
+    }
+
+    const record = TensorRecord.new(byteOffset, byteLength, dtype, view);
+
+    this.registry.set(id, record);
+
+    return id;
   }
 
   public static new() {
@@ -179,12 +245,11 @@ class TensorMemory extends LinkedList<FreeMemoryBlock> {
   }
 }
 
-let _registry = TensorRegistry.new();
-let _memory = TensorMemory.new();
-
 const TYPE = messenger = 'Tensor';
 
 export class Tensor {
+  private static memory = TensorMemory.new();
+
   public readonly type = TYPE;
   public readonly id: TensorId;
   public readonly length: number;
@@ -200,11 +265,11 @@ export class Tensor {
     this.length = getLength(shape);
     this.strides = getStrides(shape);
     this.rank = getRank(shape);
-    this.id = Tensor.write(values, dtype);
+    this.id = Tensor.memory.write(values, dtype);
   }
 
   public dispose() {
-    Tensor.delete(this.id);
+    Tensor.memory.delete(this.id);
   }
 
   public index(index: number[]): number | undefined {
@@ -214,14 +279,14 @@ export class Tensor {
       messenger + '.index'
     );
 
-    const values = this.values();
+    const value = this.value();
 
-    if (values === undefined) {
+    if (value === undefined) {
       return undefined;
     }
 
-    if (isNumber(values)) {
-      return values;
+    if (isNumber(value)) {
+      return value;
     }
 
     let offset = 0;
@@ -230,11 +295,11 @@ export class Tensor {
       offset += index[i] * this.strides[i];
     }
 
-    return values[offset];
+    return value[offset];
   }
 
-  public values(): TensorValues | undefined {
-    const view = Tensor.read(this.id);
+  public value(): TensorValues | undefined {
+    const view = Tensor.memory.read(this.id);
 
     if (view === undefined) {
       return undefined;
@@ -281,78 +346,6 @@ export class Tensor {
       shape,
       dtype
     );
-  }
-
-  private static delete(id: TensorId): boolean {
-    const record = _registry.get(id);
-
-    if (record === undefined) {
-      return false;
-    }
-
-    _memory.free(record.byteOffset);
-    _registry.delete(id);
-
-    return true;
-  }
-
-  private static read(id: TensorId): TensorArrayValues | undefined {
-    const record = _registry.get(id);
-
-    return record?.view;
-  }
-
-  private static write(values: TensorValues, dtype: TensorDataType): TensorId {
-    const id: TensorId = {};
-
-    const length = isNumber(values) ? 1 : values.length;
-
-    const byteLength = length * getSize(dtype);
-    const byteOffset = _memory.allocate(byteLength);
-    const rawView = _memory.view(byteOffset);
-
-    assert(
-      rawView.byteLength === byteLength,
-      `"rawView.byteLength" ${rawView.byteLength} !== tensor byteLength ${byteLength}`,
-      messenger + '.read'
-    );
-
-    let view: TensorArrayValues;
-
-    switch (dtype) {
-      case 'i32':
-        view = new Int32Array(rawView.buffer, byteOffset, length);
-      case 'f64':
-      default:
-        view = new Float64Array(rawView.buffer, byteOffset, length);
-    }
-
-    if (isNumber(values)) {
-      view[0] = values;
-    } else {
-      view.set(values);
-    }
-
-    const record = TensorRecord.new(byteOffset, byteLength, dtype, view);
-
-    _registry.set(id, record);
-
-    return id;
-  }
-
-  // For debugging only
-  
-  private static memory(): TensorMemory {
-    return _memory;
-  }
-
-  private static registry(): TensorRegistry {
-    return _registry;
-  }
-
-  private static reset() {
-    _registry = TensorRegistry.new();
-    _memory = TensorMemory.new();
   }
 }
 
