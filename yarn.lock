@@ -176,10 +176,10 @@
     lodash "^4.17.19"
     to-fast-properties "^2.0.0"
 
-"@exomath/core@^0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@exomath/core/-/core-0.8.0.tgz#bf3672c0719a7c8f1ff9aadfb08a83f5569539cd"
-  integrity sha512-igqroFxMWe5ftzl+NjERVDPaU/70sc2lcg9NZHDBy93HPZ2mREH1Y8JgFHl+t6cTpKpWjthNXZqEJBY16EY2jw==
+"@exomath/core@^0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@exomath/core/-/core-0.8.1.tgz#80a7b79a39cd4d7540894f7b085712245b1a5e05"
+  integrity sha512-MfRFHtFhSwclLP1/2Dgn//M7HpgMOmKoSUryMzA43EfGT9H2R4FszfXSLRJEkN6BzOddh/TxPsPY5YOugT25Fg==
   dependencies:
     esm "^3.2.25"
 

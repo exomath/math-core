@@ -18,7 +18,7 @@
     "repl": "node bin/repl.js"
   },
   "dependencies": {
-    "@exomath/core": "^0.8.0",
+    "@exomath/core": "^0.8.1",
     "esm": "^3.2.25"
   },
   "devDependencies": {
