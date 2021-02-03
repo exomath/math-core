@@ -87,7 +87,7 @@ interface ITensorMemoryHeap {
 
 const HEAP_PAGE_DELTA = 10;
 
-let messenger = 'TensorMemory';
+const messenger = 'Tensor';
 
 class TensorMemory {
   private heap: ITensorMemoryHeap;
@@ -113,7 +113,7 @@ class TensorMemory {
       assert(
         this.heap.grow !== undefined,
         `The heap does not have ${byteLength} byte${byteLength === 1 ? '' : 's'} to allocate and is not growable`,
-        messenger + '.allocate'
+        messenger + 'Memory.allocate'
       );
 
       const newByteOffset = this.heap.buffer.byteLength;
@@ -127,7 +127,7 @@ class TensorMemory {
       assert(
         byteLength <= block.byteLength,
         `A single tensor of ${byteLength} bytes cannot be allocated from the heap; the maximum size is ${block.byteLength} bytes`,
-        messenger + '.allocate'
+        messenger + 'Memory.allocate'
       );
     }
 
@@ -234,7 +234,7 @@ class TensorMemory {
   }
 }
 
-const TYPE = messenger = 'Tensor';
+const TYPE = 'Tensor';
 
 export class Tensor {
   private static memory: TensorMemory;
