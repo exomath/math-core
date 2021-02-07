@@ -52,32 +52,21 @@ interface IMemoryBlock {
 }
 
 class TensorMemoryBlock implements IMemoryBlock {
-  private constructor(
+  public constructor(
     public readonly byteOffset: number,
     public readonly byteLength: number,
     public readonly dtype: string,
     public readonly view: TensorArrayValues
-  ) {}
-
-  public static new(
-    byteOffset: number,
-    byteLength: number,
-    dtype: string,
-    view: TensorArrayValues
   ) {
-    return Object.freeze(new TensorMemoryBlock(byteOffset, byteLength, dtype, view));
+    Object.freeze(this);
   }
 }
 
 class FreeMemoryBlock implements IMemoryBlock {
-  private constructor(
+  public constructor(
     public byteOffset: number,
     public byteLength: number
   ) {}
-
-  public static new(byteOffset: number, byteLength: number) {
-    return new FreeMemoryBlock(byteOffset, byteLength);
-  }
 }
 
 interface ITensorMemoryHeap {
@@ -94,7 +83,7 @@ class TensorMemory {
   private freeBlocks: Map<number, FreeMemoryBlock> = new Map();
   public tensorBlocks: Map<TensorId, TensorMemoryBlock> = new Map();
 
-  private constructor(initial?: ArrayBuffer | ITensorMemoryHeap) {
+  public constructor(initial?: ArrayBuffer | ITensorMemoryHeap) {
     if (initial === undefined) {
       this.heap = new WebAssembly.Memory({ initial: HEAP_PAGE_DELTA });
     } else if (initial instanceof ArrayBuffer) {
@@ -173,7 +162,7 @@ class TensorMemory {
   }
 
   private free(byteOffset: number, byteLength: number): FreeMemoryBlock {
-    const block = this.coalesce(FreeMemoryBlock.new(byteOffset, byteLength));
+    const block = this.coalesce(new FreeMemoryBlock(byteOffset, byteLength));
 
     this.freeBlocks.set(byteOffset, block);
 
@@ -222,15 +211,11 @@ class TensorMemory {
       view.set(values);
     }
 
-    const block = TensorMemoryBlock.new(byteOffset, byteLength, dtype, view);
+    const block = new TensorMemoryBlock(byteOffset, byteLength, dtype, view);
 
     this.tensorBlocks.set(id, block);
 
     return id;
-  }
-
-  public static new(initial?: ArrayBuffer | ITensorMemoryHeap) {
-    return new TensorMemory(initial);
   }
 }
 
@@ -245,7 +230,7 @@ export class Tensor {
   public readonly strides: number[];
   public readonly rank: number;
 
-  private constructor(
+  public constructor(
     values: TensorValues,
     public readonly shape: number[],
     public readonly dtype: TensorDataType
@@ -260,6 +245,8 @@ export class Tensor {
     }
 
     this.id = Tensor.memory.write(values, dtype);
+
+    Object.freeze(this);
   }
 
   public dispose() {
@@ -306,10 +293,6 @@ export class Tensor {
     return view.slice();
   }
 
-  private static new(values: TensorValues, shape: number[], dtype: TensorDataType) {
-    return Object.freeze(new Tensor(values, shape, dtype));
-  }
-
   public static fromScalar(value: ScalarLike, dtype?: TensorDataType) {
     assert(
       isNumber(value) || isString(value) || isBoolean(value),
@@ -321,7 +304,7 @@ export class Tensor {
 
     const shape: number[] = [];
 
-    return Tensor.new(value, shape, dtype);
+    return new Tensor(value, shape, dtype);
   }
 
   public static fromArray(values: ArrayLike, shape: number[], dtype?: TensorDataType) {
@@ -335,7 +318,7 @@ export class Tensor {
 
     dtype = dtype ?? getDataType(values);
 
-    return Tensor.new(
+    return new Tensor(
       (isNumberArray(values) ? getTypedArray(values as number[], dtype) : values) as TensorValues,
       shape,
       dtype
@@ -343,7 +326,7 @@ export class Tensor {
   }
 
   public static init(initial?: ArrayBuffer | ITensorMemoryHeap) {
-    Tensor.memory = TensorMemory.new(initial);
+    Tensor.memory = new TensorMemory(initial);
   }
 }
 
