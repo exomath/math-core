@@ -1,5 +1,6 @@
 import {
   assert,
+  hasType,
   isArray,
   isBoolean,
   isNull,
@@ -327,6 +328,26 @@ export class Tensor {
 
   public static init(initial?: ArrayBuffer | ITensorMemoryHeap) {
     Tensor.memory = new TensorMemory(initial);
+  }
+
+  public static isTensor(value: any): value is Tensor {
+    return value instanceof Tensor || hasType(value, TYPE);
+  }
+
+  public static isScalar(value: Tensor): value is Tensor {
+    return Tensor.isTensor(value) && value.rank === 0;
+  }
+
+  public static isRowVector(value: Tensor): value is Tensor {
+    return Tensor.isMatrix(value) && value.shape[0] === 1;
+  }
+
+  public static isColumnVector(value: Tensor): value is Tensor {
+    return Tensor.isMatrix(value) && value.shape[1] === 1;
+  }
+
+  public static isMatrix(value: Tensor): value is Tensor {
+    return Tensor.isTensor(value) && value.rank === 2;
   }
 }
 
