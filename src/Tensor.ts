@@ -346,6 +346,10 @@ export class Tensor {
     return Tensor.isMatrix(value) && value.shape[1] === 1;
   }
 
+  public static isVector(value: Tensor): value is Tensor {
+    return Tensor.isRowVector(value) || Tensor.isColumnVector(value);
+  }
+
   public static isMatrix(value: Tensor): value is Tensor {
     return Tensor.isTensor(value) && value.rank === 2;
   }
